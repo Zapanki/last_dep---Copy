@@ -1,6 +1,6 @@
 import 'package:last_dep/screens/home.dart';
-import 'package:last_dep/screens/reg_screen.dart';
-import 'package:last_dep/screens/reset_pass.dart';
+import 'package:last_dep/screens/registration_and_login/reg_screen.dart';
+import 'package:last_dep/screens/registration_and_login/reset_pass.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
