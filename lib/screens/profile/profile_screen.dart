@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:firebase_app_check/firebase_app_check.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:last_dep/screens/registration_and_login/login_screen.dart';
 import 'package:path/path.dart' as path;
 
 class ProfileScreen extends StatefulWidget {
@@ -23,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _displayNameController;
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
+  String? _profileImageUrl;
 
   Future<Map<String, dynamic>?> _getUserData() async {
     DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).get();
@@ -30,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).set({
         'display_name': widget.user!.displayName ?? 'No display name',
         'phone_number': widget.user!.phoneNumber ?? 'No phone number',
+        'photo_url': widget.user!.photoURL ?? '',
       });
       doc = await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).get();
     }
@@ -118,7 +120,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       await widget.user!.updatePhotoURL(imageUrl);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile image updated successfully')));
-      setState(() {}); // Обновить интерфейс
+      setState(() {
+        _profileImageUrl = imageUrl; // Обновить URL изображения в состоянии
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update profile image: ${e.toString()}')));
     }
@@ -129,6 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _phoneController = TextEditingController();
     _displayNameController = TextEditingController();
+    _profileImageUrl = widget.user?.photoURL; // Инициализация URL изображения
   }
 
   @override
@@ -140,81 +145,100 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: _getUserData(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        final userData = snapshot.data;
-        if (userData != null) {
-          _phoneController.text = userData['phone_number'] ?? '';
-          _displayNameController.text = userData['display_name'] ?? '';
-        } else {
-          _phoneController.text = widget.user?.phoneNumber ?? '';
-          _displayNameController.text = widget.user?.displayName ?? '';
-        }
-
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundImage: widget.user?.photoURL != null
-                        ? NetworkImage(widget.user!.photoURL!)
-                        : AssetImage('assets/images/userprofile.png') as ImageProvider,
-                  ),
-                ),
-                SizedBox(height: 20),
-                GestureDetector(
-                  onTap: () => _showEditDialog('display_name', _displayNameController.text),
-                  child: Column(
-                    children: [
-                      Text(
-                        _displayNameController.text.isEmpty ? 'No display name' : _displayNameController.text,
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  widget.user?.email ?? 'No email',
-                  style: TextStyle(fontSize: 16),
-                ),
-                SizedBox(height: 20),
-                GestureDetector(
-                  onTap: () => _showEditDialog('phone_number', _phoneController.text),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.phone),
-                        title: Text('Phone Number'),
-                        subtitle: Text(_phoneController.text.isEmpty ? 'No phone number' : _phoneController.text),
-                      ),
-                    ],
-                  ),
-                ),
-                ListTile(
-                  leading: Icon(Icons.date_range),
-                  title: Text('Member Since'),
-                  subtitle: Text(widget.user?.metadata.creationTime?.toLocal().toString() ?? 'N/A'),
-                ),
-              ],
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Profile'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () {
+              FirebaseAuth.instance.signOut();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen()),
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _getUserData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final userData = snapshot.data;
+          if (userData != null) {
+            _phoneController.text = userData['phone_number'] ?? '';
+            _displayNameController.text = userData['display_name'] ?? '';
+            _profileImageUrl = userData['photo_url'] ?? widget.user?.photoURL;
+          } else {
+            _phoneController.text = widget.user?.phoneNumber ?? '';
+            _displayNameController.text = widget.user?.displayName ?? '';
+            _profileImageUrl = widget.user?.photoURL;
+          }
+
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundImage: _profileImageUrl != null
+                          ? NetworkImage(_profileImageUrl!)
+                          : AssetImage('assets/images/userprofile.png') as ImageProvider,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () => _showEditDialog('display_name', _displayNameController.text),
+                    child: Column(
+                      children: [
+                        Text(
+                          _displayNameController.text.isEmpty ? 'No display name' : _displayNameController.text,
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    widget.user?.email ?? 'No email',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () => _showEditDialog('phone_number', _phoneController.text),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.phone),
+                          title: Text('Phone Number'),
+                          subtitle: Text(_phoneController.text.isEmpty ? 'No phone number' : _phoneController.text),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.date_range),
+                    title: Text('Member Since'),
+                    subtitle: Text(widget.user?.metadata.creationTime?.toLocal().toString() ?? 'N/A'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
