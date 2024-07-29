@@ -1,3 +1,4 @@
+import 'package:last_dep/screens/registration_and_login/intro_page.dart';
 import 'package:last_dep/screens/registration_and_login/reg_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: RegisterScreen(),
+      home: IntroPage(),
     );
   }
 }

@@ -1,11 +1,12 @@
 import 'dart:io';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:last_dep/screens/registration_and_login/login_screen.dart';
+import 'package:last_dep/screens/Home_screens/CreatePostScreen.dart';
+import 'package:last_dep/screens/settings/settings_screen.dart';
 import 'package:path/path.dart' as path;
 
 class ProfileScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _phoneController;
   late TextEditingController _displayNameController;
+  late TextEditingController _statusController; // Новый контроллер для статуса
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
   String? _profileImageUrl;
@@ -32,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'display_name': widget.user!.displayName ?? 'No display name',
         'phone_number': widget.user!.phoneNumber ?? 'No phone number',
         'photo_url': widget.user!.photoURL ?? '',
+        'status': 'Nothing here' // Добавить статус при создании пользователя
       });
       doc = await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).get();
     }
@@ -59,11 +62,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Edit ${field == "display_name" ? "Nickname" : "Phone Number"}'),
+          title: Text('Edit ${field == "display_name" ? "Nickname" : field == "phone_number" ? "Phone Number" : "Status"}'),
           content: TextField(
             controller: _controller,
             decoration: InputDecoration(
-              labelText: field == "display_name" ? "Enter new nickname" : "Enter new phone number",
+              labelText: field == "display_name" ? "Enter new nickname" : field == "phone_number" ? "Enter new phone number" : "Enter new status",
             ),
           ),
           actions: <Widget>[
@@ -128,11 +131,145 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _toggleLike(DocumentSnapshot post) async {
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    final postRef = FirebaseFirestore.instance.collection('posts').doc(post.id);
+    final postDoc = await postRef.get();
+    List likes = postDoc['likes'] ?? [];
+
+    if (likes.contains(userId)) {
+      postRef.update({'likes': FieldValue.arrayRemove([userId])});
+    } else {
+      postRef.update({'likes': FieldValue.arrayUnion([userId])});
+    }
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, DocumentSnapshot post) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Подтверждение удаления"),
+          content: Text("Точно ли вы хотите удалить пост?"),
+          actions: <Widget>[
+            TextButton(
+              child: Text("Нет"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text("Да"),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deletePost(post);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deletePost(DocumentSnapshot post) async {
+    await FirebaseFirestore.instance.collection('posts').doc(post.id).delete();
+  }
+
+  void _showRepostOptions(BuildContext context, DocumentSnapshot post) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Repost to profile'),
+              onTap: () {
+                Navigator.pop(context);
+                _repostToProfile(post);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.message),
+              title: Text('Send to chat'),
+              onTap: () {
+                // Логика отправки в чат
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _repostToProfile(DocumentSnapshot post) async {
+    final user = FirebaseAuth.instance.currentUser;
+    await FirebaseFirestore.instance.collection('posts').add({
+      'userId': user!.uid,
+      'originalPostId': post.id,
+      'caption': post['caption'],
+      'imageUrl': post['imageUrl'],
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  void _showUserDetailsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('User Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.email),
+                title: Text('Email'),
+                subtitle: Text(widget.user?.email ?? 'No email'),
+              ),
+              GestureDetector(
+                onTap: () => _showEditDialog('status', _statusController.text),
+                child: ListTile(
+                  leading: Icon(Icons.info),
+                  title: Text('Status'),
+                  subtitle: Text(_statusController.text),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _showEditDialog('phone_number', _phoneController.text),
+                child: ListTile(
+                  leading: Icon(Icons.phone),
+                  title: Text('Phone Number'),
+                  subtitle: Text(_phoneController.text.isEmpty ? 'No phone number' : _phoneController.text),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.date_range),
+                title: Text('Member Since'),
+                subtitle: Text(widget.user?.metadata.creationTime?.toLocal().toString() ?? 'N/A'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _phoneController = TextEditingController();
     _displayNameController = TextEditingController();
+    _statusController = TextEditingController(); // Инициализация контроллера статуса
     _profileImageUrl = widget.user?.photoURL; // Инициализация URL изображения
   }
 
@@ -140,6 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _phoneController.dispose();
     _displayNameController.dispose();
+    _statusController.dispose(); // Освобождение контроллера статуса
     super.dispose();
   }
 
@@ -149,6 +287,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: Text('Profile'),
         actions: <Widget>[
+          IconButton(onPressed: (){
+            Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsScreen()),
+              );
+          }, icon: Icon(Icons.settings)),
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () {
@@ -161,34 +305,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _getUserData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
+      body: Stack(
+        children: [
+          FutureBuilder<Map<String, dynamic>?>(
+            future: _getUserData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-          final userData = snapshot.data;
-          if (userData != null) {
-            _phoneController.text = userData['phone_number'] ?? '';
-            _displayNameController.text = userData['display_name'] ?? '';
-            _profileImageUrl = userData['photo_url'] ?? widget.user?.photoURL;
-          } else {
-            _phoneController.text = widget.user?.phoneNumber ?? '';
-            _displayNameController.text = widget.user?.displayName ?? '';
-            _profileImageUrl = widget.user?.photoURL;
-          }
+              final userData = snapshot.data;
+              if (userData != null) {
+                _phoneController.text = userData['phone_number'] ?? '';
+                _displayNameController.text = userData['display_name'] ?? '';
+                _statusController.text = userData['status'] ?? 'Nothing here'; // Заполнение поля статуса
+                _profileImageUrl = userData['photo_url'] ?? widget.user?.photoURL;
+              } else {
+                _phoneController.text = widget.user?.phoneNumber ?? '';
+                _displayNameController.text = widget.user?.displayName ?? '';
+                _statusController.text = 'Nothing here'; // Заполнение поля статуса по умолчанию
+                _profileImageUrl = widget.user?.photoURL;
+              }
 
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
+              return ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
                   GestureDetector(
                     onTap: _pickImage,
                     child: CircleAvatar(
@@ -200,44 +345,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   SizedBox(height: 20),
                   GestureDetector(
-                    onTap: () => _showEditDialog('display_name', _displayNameController.text),
-                    child: Column(
-                      children: [
-                        Text(
-                          _displayNameController.text.isEmpty ? 'No display name' : _displayNameController.text,
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    widget.user?.email ?? 'No email',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: () => _showEditDialog('phone_number', _phoneController.text),
+                    onTap: () => _showEditDialog('display_name', _displayNameController.text), // Редактирование имени
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Icon(Icons.phone),
-                          title: Text('Phone Number'),
-                          subtitle: Text(_phoneController.text.isEmpty ? 'No phone number' : _phoneController.text),
+                          leading: Icon(Icons.person),
+                          title: Text('Name'),
+                          subtitle: Text(_displayNameController.text),
                         ),
                       ],
                     ),
                   ),
-                  ListTile(
-                    leading: Icon(Icons.date_range),
-                    title: Text('Member Since'),
-                    subtitle: Text(widget.user?.metadata.creationTime?.toLocal().toString() ?? 'N/A'),
+                  GestureDetector(
+                    onTap: () => _showEditDialog('status', _statusController.text), // Редактирование статуса
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.info),
+                          title: Text('Status'),
+                          subtitle: Text(_statusController.text),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _showUserDetailsDialog,
+                    child: Text('View All'),
+                  ),
+                  StreamBuilder(
+                    stream: FirebaseFirestore.instance
+                        .collection('posts')
+                        .where('userId', isEqualTo: widget.user!.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return CircularProgressIndicator();
+                      var posts = snapshot.data!.docs;
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: posts.length,
+                        itemBuilder: (context, index) {
+                          var post = posts[index];
+                          return Card(
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  title: Text(post['caption']),
+                                  subtitle: post.data().containsKey('originalPostId')
+                                      ? Text('Reposted')
+                                      : Text('Original Post'),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.thumb_up),
+                                        onPressed: () => _toggleLike(post),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete),
+                                        onPressed: () => _showDeleteConfirmationDialog(context, post),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.share),
+                                        onPressed: () => _showRepostOptions(context, post),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Image.network(post['imageUrl']),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ],
-              ),
+              );
+            },
+          ),
+          Positioned(
+            bottom: 16.0,
+            right: 16.0,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CreatePostScreen()),
+                );
+              },
+              child: Icon(Icons.add),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
