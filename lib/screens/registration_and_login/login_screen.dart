@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:last_dep/screens/home.dart';
 import 'package:last_dep/screens/registration_and_login/reset_pass.dart';
+import 'package:last_dep/screens/settings/theme/theme_provider.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'reg_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,76 +17,75 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  bool _isEmailInvalid = false;
-  bool _isPasswordInvalid = false;
-  String _emailError = '';
-  String _passwordError = '';
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Future<void> _login(BuildContext context) async {
-    setState(() {
-      _isEmailInvalid = false;
-      _isPasswordInvalid = false;
-      _emailError = '';
-      _passwordError = '';
-    });
-
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      if (userData != null) {
+        themeProvider.setThemeMode(
+            userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     } catch (e) {
-      print("Failed to sign in with Email & Password: $e");
-      _showErrorDialog("Failed to sign in: $e");
+      _showErrorDialog("Failed to login: $e");
     }
   }
 
-  Future<void> _signInWithGoogle() async {
+  Future<void> _loginWithGoogle(BuildContext context) async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        return; // Пользователь отменил вход через Google
-      }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser!.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
 
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
-      User? user = userCredential.user;
-
-      if (user != null) {
-        final QuerySnapshot result = await FirebaseFirestore.instance
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+      if (!userDoc.exists) {
+        await FirebaseFirestore.instance
             .collection('users')
-            .where('uid', isEqualTo: user.uid)
-            .get();
-        final List<DocumentSnapshot> documents = result.docs;
-
-        if (documents.isEmpty) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'email': user.email,
-            'uid': user.uid,
-            'display_name': user.displayName,
-            'photo_url': user.photoURL,
-          });
+            .doc(userCredential.user!.uid)
+            .set({
+          'name': userCredential.user!.displayName,
+          'email': userCredential.user!.email,
+          'uid': userCredential.user!.uid,
+          'theme':
+              'light', // Установка темы по умолчанию при первом входе с Google
+        });
+        themeProvider.setThemeMode(ThemeMode.light);
+      } else {
+        final userData = userDoc.data() as Map<String, dynamic>?;
+        if (userData != null) {
+          themeProvider.setThemeMode(
+              userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
         }
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
       }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
     } catch (e) {
-      print("Failed to sign in with Google: $e");
       _showErrorDialog("Failed to sign in with Google: $e");
     }
   }
@@ -119,141 +120,143 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        child: Container(
-          height: MediaQuery.of(context).size.height,
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              Column(
-                children: <Widget>[
-                  Text(
-                    "Login",
-                    style: TextStyle(
+        padding: EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Column(
+              children: <Widget>[
+                Text(
+                  "Login",
+                  style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                      color: Colors.black),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  "Login to your account",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[700],
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Login to your account",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                children: <Widget>[
-                  inputField(
+                ),
+              ],
+            ),
+            SizedBox(height: 30),
+            Column(
+              children: <Widget>[
+                inputField(
                     label: "Email",
                     controller: _emailController,
-                    isInvalid: _isEmailInvalid,
-                    errorMessage: _emailError,
-                    hasSuffixIcon: false,
-                  ),
-                  inputField(
-                    label: "Password",
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible,
-                    toggleVisibility: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
-                    isPasswordVisible: _isPasswordVisible,
-                    isInvalid: _isPasswordInvalid,
-                    errorMessage: _passwordError,
-                  ),
-                ],
+                    isInvalid: false,
+                    errorMessage: '',
+                    hasSuffixIcon: false),
+                inputField(
+                  label: "Password",
+                  controller: _passwordController,
+                  obscureText: true,
+                  toggleVisibility: () {},
+                  isPasswordVisible: false,
+                  isInvalid: false,
+                  errorMessage: '',
+                ),
+              ],
+            ),
+            SizedBox(height: 30),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(50),
               ),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
+              child: MaterialButton(
+                height: 70,
+                onPressed: () {
+                  _login(context);
+                },
+                color: Color(0xff0095FF),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(50),
                 ),
-                child: MaterialButton(
-                  height: 70,
-                  onPressed: () {
-                    _login(context);
-                  },
-                  color: Color(0xff0095FF),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                  child: Text(
-                    "Login",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.white,
-                    ),
+                child: Text(
+                  "Login",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.white,
                   ),
                 ),
               ),
-              SizedBox(height: 10),
-              Text(
-                "or Continue with",
-                style: TextStyle(
-                  fontSize: 16,
-                ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Or continue with:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(50),
               ),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
+              child: MaterialButton(
+                height: 70,
+                onPressed: () {
+                  _loginWithGoogle(context);
+                },
+                color: Colors.red,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(50),
                 ),
-                child: ElevatedButton.icon(
-                  onPressed: _signInWithGoogle,
-                  icon: Image.asset(
-                    'assets/images/google.png',
-                    height: 35.0,
-                    width: 35.0,
-                  ),
-                  label: Text(''),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Image.asset(
+                      'assets/images/google.png', // Путь к вашей картинке Google
+                      height: 30.0,
+                      width: 30.0,
                     ),
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    "Don't have an account? ",
-                    style: TextStyle(
-                      fontSize: 17,
-                      color: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => RegisterScreen()),
-                      );
-                    },
-                    child: Text(
-                      "Register",
+                    SizedBox(width: 10), // Отступ между иконкой и текстом
+                    Text(
+                      "Login with Google",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Color(0xff0095FF),
+                        fontSize: 20,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              Row(
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text("Don't have an account? "),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => RegisterScreen()),
+                    );
+                  },
+                  child: Text(
+                    "Register",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xff0095FF),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Text("Forgot Password? "),
@@ -275,14 +278,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 10),
-              SizedBox(
-                height: 150, // Укажите подходящую высоту для анимации
-                width: 150,  // Укажите подходящую ширину для анимации
-                child: Lottie.asset('assets/animations/Animation - 1721162487226.json'),
-              ),
-            ],
-          ),
+            SizedBox(
+              height: 10,
+            ),
+            SizedBox(
+              height: 150, // Укажите подходящую высоту для анимации
+              width: 150, // Укажите подходящую ширину для анимации
+              child: Lottie.asset(
+                  'assets/animations/Animation - 1721162487226.json'),
+            ),
+          ],
         ),
       ),
     );
@@ -304,7 +309,8 @@ Widget inputField({
     children: <Widget>[
       Text(
         label,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+        style: TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
       ),
       SizedBox(height: 5),
       TextField(
@@ -313,11 +319,13 @@ Widget inputField({
         decoration: InputDecoration(
           contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 10),
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: isInvalid ? Colors.red : Colors.grey[400]!),
+            borderSide:
+                BorderSide(color: isInvalid ? Colors.red : Colors.grey[400]!),
             borderRadius: BorderRadius.circular(12),
           ),
           border: OutlineInputBorder(
-            borderSide: BorderSide(color: isInvalid ? Colors.red : Colors.grey[400]!),
+            borderSide:
+                BorderSide(color: isInvalid ? Colors.red : Colors.grey[400]!),
             borderRadius: BorderRadius.circular(12),
           ),
           suffixIcon: hasSuffixIcon && obscureText
@@ -333,11 +341,6 @@ Widget inputField({
         ),
       ),
       SizedBox(height: 20),
-      if (isInvalid)
-        Text(
-          errorMessage,
-          style: TextStyle(color: Colors.red, fontSize: 12),
-        ),
     ],
   );
 }

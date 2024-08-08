@@ -7,7 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:last_dep/screens/registration_and_login/login_screen.dart';
 import 'package:last_dep/screens/Home_screens/CreatePostScreen.dart';
 import 'package:last_dep/screens/settings/settings_screen.dart';
+import 'package:last_dep/screens/settings/theme/theme_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final User? user;
@@ -22,37 +24,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _phoneController;
   late TextEditingController _displayNameController;
-  late TextEditingController _statusController; // Новый контроллер для статуса
+  late TextEditingController _statusController;
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
   String? _profileImageUrl;
 
   Future<Map<String, dynamic>?> _getUserData() async {
-    DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).get();
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.user!.uid)
+        .get();
     if (!doc.exists) {
-      await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).set({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user!.uid)
+          .set({
         'display_name': widget.user!.displayName ?? 'No display name',
         'phone_number': widget.user!.phoneNumber ?? 'No phone number',
         'photo_url': widget.user!.photoURL ?? '',
-        'status': 'Nothing here' // Добавить статус при создании пользователя
+        'status': 'Nothing here',
+        'theme': 'light', // Установка темы по умолчанию
       });
-      doc = await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).get();
+      doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user!.uid)
+          .get();
     }
     return doc.data() as Map<String, dynamic>?;
   }
 
   void _updateUserData(String field, String value) async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user!.uid)
+          .update({
         field: value,
       });
       if (field == 'display_name') {
         await widget.user!.updateDisplayName(value);
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Profile updated successfully')));
       setState(() {}); // Обновить интерфейс
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update profile: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update profile: ${e.toString()}')));
     }
   }
 
@@ -62,11 +79,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Edit ${field == "display_name" ? "Nickname" : field == "phone_number" ? "Phone Number" : "Status"}'),
+          title: Text(
+              'Edit ${field == "display_name" ? "Nickname" : field == "phone_number" ? "Phone Number" : "Status"}'),
           content: TextField(
             controller: _controller,
             decoration: InputDecoration(
-              labelText: field == "display_name" ? "Enter new nickname" : field == "phone_number" ? "Enter new phone number" : "Enter new status",
+              labelText: field == "display_name"
+                  ? "Enter new nickname"
+                  : field == "phone_number"
+                      ? "Enter new phone number"
+                      : "Enter new status",
             ),
           ),
           actions: <Widget>[
@@ -105,29 +127,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       String fileName = path.basename(_imageFile!.path);
-      Reference storageReference = FirebaseStorage.instance.ref().child('profile_images/$fileName');
+      Reference storageReference =
+          FirebaseStorage.instance.ref().child('profile_images/$fileName');
       UploadTask uploadTask = storageReference.putFile(_imageFile!);
       await uploadTask.whenComplete(() async {
         String downloadURL = await storageReference.getDownloadURL();
         await _updateUserProfileImage(downloadURL);
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload image: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image: ${e.toString()}')));
     }
   }
 
   Future<void> _updateUserProfileImage(String imageUrl) async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.user!.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user!.uid)
+          .update({
         'photo_url': imageUrl,
       });
       await widget.user!.updatePhotoURL(imageUrl);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile image updated successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Profile image updated successfully')));
       setState(() {
         _profileImageUrl = imageUrl; // Обновить URL изображения в состоянии
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update profile image: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to update profile image: ${e.toString()}')));
     }
   }
 
@@ -138,13 +167,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     List likes = postDoc['likes'] ?? [];
 
     if (likes.contains(userId)) {
-      postRef.update({'likes': FieldValue.arrayRemove([userId])});
+      postRef.update({
+        'likes': FieldValue.arrayRemove([userId])
+      });
     } else {
-      postRef.update({'likes': FieldValue.arrayUnion([userId])});
+      postRef.update({
+        'likes': FieldValue.arrayUnion([userId])
+      });
     }
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context, DocumentSnapshot post) {
+  void _showDeleteConfirmationDialog(
+      BuildContext context, DocumentSnapshot post) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -237,17 +271,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () => _showEditDialog('phone_number', _phoneController.text),
+                onTap: () =>
+                    _showEditDialog('phone_number', _phoneController.text),
                 child: ListTile(
                   leading: Icon(Icons.phone),
                   title: Text('Phone Number'),
-                  subtitle: Text(_phoneController.text.isEmpty ? 'No phone number' : _phoneController.text),
+                  subtitle: Text(_phoneController.text.isEmpty
+                      ? 'No phone number'
+                      : _phoneController.text),
                 ),
               ),
               ListTile(
                 leading: Icon(Icons.date_range),
                 title: Text('Member Since'),
-                subtitle: Text(widget.user?.metadata.creationTime?.toLocal().toString() ?? 'N/A'),
+                subtitle: Text(
+                    widget.user?.metadata.creationTime?.toLocal().toString() ??
+                        'N/A'),
               ),
             ],
           ),
@@ -269,7 +308,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _phoneController = TextEditingController();
     _displayNameController = TextEditingController();
-    _statusController = TextEditingController(); // Инициализация контроллера статуса
+    _statusController =
+        TextEditingController(); // Инициализация контроллера статуса
     _profileImageUrl = widget.user?.photoURL; // Инициализация URL изображения
   }
 
@@ -281,27 +321,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _logoutUser() async {
+    try {
+      // Sign out from Firebase
+      await FirebaseAuth.instance.signOut();
+
+      // Reset any additional user-specific settings or data here
+
+      // Navigate back to the login screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to logout: ${e.toString()}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile'),
         actions: <Widget>[
-          IconButton(onPressed: (){
-            Navigator.push(
+          IconButton(
+            onPressed: () {
+              Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => SettingsScreen()),
               );
-          }, icon: Icon(Icons.settings)),
+            },
+            icon: Icon(Icons.settings),
+          ),
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () {
               FirebaseAuth.instance.signOut();
+              final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+              themeProvider.setThemeMode(ThemeMode.light); // Сброс темы на значение по умолчанию
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => LoginScreen()),
               );
-            },
+              },
           ),
         ],
       ),
@@ -322,12 +386,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (userData != null) {
                 _phoneController.text = userData['phone_number'] ?? '';
                 _displayNameController.text = userData['display_name'] ?? '';
-                _statusController.text = userData['status'] ?? 'Nothing here'; // Заполнение поля статуса
-                _profileImageUrl = userData['photo_url'] ?? widget.user?.photoURL;
+                _statusController.text = userData['status'] ??
+                    'Nothing here'; // Заполнение поля статуса
+                _profileImageUrl =
+                    userData['photo_url'] ?? widget.user?.photoURL;
               } else {
                 _phoneController.text = widget.user?.phoneNumber ?? '';
                 _displayNameController.text = widget.user?.displayName ?? '';
-                _statusController.text = 'Nothing here'; // Заполнение поля статуса по умолчанию
+                _statusController.text =
+                    'Nothing here'; // Заполнение поля статуса по умолчанию
                 _profileImageUrl = widget.user?.photoURL;
               }
 
@@ -340,12 +407,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       radius: 50,
                       backgroundImage: _profileImageUrl != null
                           ? NetworkImage(_profileImageUrl!)
-                          : AssetImage('assets/images/userprofile.png') as ImageProvider,
+                          : AssetImage('assets/images/userprofile.png')
+                              as ImageProvider,
                     ),
                   ),
                   SizedBox(height: 20),
                   GestureDetector(
-                    onTap: () => _showEditDialog('display_name', _displayNameController.text), // Редактирование имени
+                    onTap: () => _showEditDialog('display_name',
+                        _displayNameController.text), // Редактирование имени
                     child: Column(
                       children: [
                         ListTile(
@@ -357,7 +426,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => _showEditDialog('status', _statusController.text), // Редактирование статуса
+                    onTap: () => _showEditDialog('status',
+                        _statusController.text), // Редактирование статуса
                     child: Column(
                       children: [
                         ListTile(
@@ -370,7 +440,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   ElevatedButton(
                     onPressed: _showUserDetailsDialog,
-                    child: Text('View All'),
+                    child: Text('All Information'),
                   ),
                   StreamBuilder(
                     stream: FirebaseFirestore.instance
@@ -391,9 +461,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 ListTile(
                                   title: Text(post['caption']),
-                                  subtitle: post.data().containsKey('originalPostId')
-                                      ? Text('Reposted')
-                                      : Text('Original Post'),
+                                  subtitle:
+                                      post.data().containsKey('originalPostId')
+                                          ? Text('Reposted')
+                                          : Text('Original Post'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -403,11 +474,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                       IconButton(
                                         icon: Icon(Icons.delete),
-                                        onPressed: () => _showDeleteConfirmationDialog(context, post),
+                                        onPressed: () =>
+                                            _showDeleteConfirmationDialog(
+                                                context, post),
                                       ),
                                       IconButton(
                                         icon: Icon(Icons.share),
-                                        onPressed: () => _showRepostOptions(context, post),
+                                        onPressed: () =>
+                                            _showRepostOptions(context, post),
                                       ),
                                     ],
                                   ),
