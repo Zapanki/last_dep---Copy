@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:last_dep/screens/home.dart';
 import 'package:last_dep/screens/settings/theme/theme_provider.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'screens/registration_and_login/login_screen.dart';
-import 'screens/registration_and_login/reg_screen.dart';
 import 'screens/profile/profile_screen.dart';
-import 'screens/settings/settings_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -31,6 +32,14 @@ class MyApp extends StatelessWidget {
             theme: ThemeData.light(),
             darkTheme: ThemeData.dark(),
             home: AuthWrapper(),
+            locale: themeProvider.locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
           );
         },
       ),
@@ -61,7 +70,7 @@ class AuthWrapper extends StatelessWidget {
                   themeProvider.setThemeMode(userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
                 }
               }
-              return ProfileScreen(user: FirebaseAuth.instance.currentUser);
+              return const HomeScreen();
             },
           );
         } else {

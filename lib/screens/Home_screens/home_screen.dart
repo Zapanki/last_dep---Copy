@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:last_dep/screens/Home_screens/CreatePostScreen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 
 class HomeScreenContent extends StatelessWidget {
   const HomeScreenContent({Key? key}) : super(key: key);
@@ -35,17 +37,17 @@ class HomeScreenContent extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Подтверждение удаления"),
-          content: Text("Точно ли вы хотите удалить пост?"),
+          title: Text(AppLocalizations.of(context)!.deletion_confirmation),
+          content: Text(AppLocalizations.of(context)!.are_you_sure_you_want_to_delete_the_post),
           actions: <Widget>[
             TextButton(
-              child: Text("Нет"),
+              child: Text(AppLocalizations.of(context)!.no),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text("Да"),
+              child: Text(AppLocalizations.of(context)!.yes),
               onPressed: () {
                 Navigator.of(context).pop();
                 _deletePost(post);
@@ -65,7 +67,7 @@ class HomeScreenContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Page'),
+        title: Text(AppLocalizations.of(context)!.home_page),
       ),
       body: Column(
         children: [
@@ -81,7 +83,7 @@ class HomeScreenContent extends StatelessWidget {
                     var post = posts[index];
                     if (!post.data().containsKey('userId')) {
                       return ListTile(
-                        title: Text('Invalid post: userId not found'),
+                        title: Text(AppLocalizations.of(context)!.invalid_post_user_id_not_found),
                       );
                     }
                     return FutureBuilder(
@@ -100,7 +102,7 @@ class HomeScreenContent extends StatelessWidget {
                                 leading: CircleAvatar(
                                   backgroundImage: NetworkImage(userData['photo_url'] ?? 'https://via.placeholder.com/150'),
                                 ),
-                                title: Text(userData['display_name'] ?? 'No Name'),
+                                title: Text(userData['display_name'] ?? AppLocalizations.of(context)!.no_name),
                                 trailing: isOwner
                                     ? IconButton(
                                         icon: Icon(Icons.delete),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:last_dep/screens/music/mini_player_wiegt.dart';
 import 'player_widget.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 
 class MusicScreen extends StatefulWidget {
   @override
@@ -67,7 +69,7 @@ class _MusicScreenState extends State<MusicScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Music"),
+        title: Text(AppLocalizations.of(context)!.musicScreenTitle),
       ),
       body: Stack(
         children: [
@@ -77,7 +79,7 @@ class _MusicScreenState extends State<MusicScreen> {
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: "Search",
+                    hintText: AppLocalizations.of(context)!.search,
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (text) {

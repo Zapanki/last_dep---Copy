@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 
 class CreatePostScreen extends StatefulWidget {
   @override
@@ -43,7 +45,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     await FirebaseFirestore.instance.collection('posts').add({
       'userId': userId,
-      'display_name': userData['display_name'] ?? 'No Name',
+      'display_name': userData['display_name'] ?? AppLocalizations.of(context)!.no_name,
       'photo_url': userData['photo_url'] ?? 'https://via.placeholder.com/150',
       'imageUrl': downloadUrl,
       'caption': _captionController.text,
@@ -58,26 +60,26 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Post'),
+        title: Text(AppLocalizations.of(context)!.create_post),
       ),
       body: Column(
         children: [
           TextField(
             controller: _captionController,
-            decoration: InputDecoration(hintText: 'Enter a caption'),
+            decoration: InputDecoration(hintText: AppLocalizations.of(context)!.enter_a_caption),
           ),
           SizedBox(height: 10),
           _image == null
-              ? Text('No image selected.')
+              ? Text(AppLocalizations.of(context)!.no_image_selected)
               : Image.file(_image!),
           SizedBox(height: 10),
           ElevatedButton(
             onPressed: _pickImage,
-            child: Text('Pick Image'),
+            child: Text(AppLocalizations.of(context)!.pick_Image),
           ),
           ElevatedButton(
             onPressed: _uploadPost,
-            child: Text('Post'),
+            child: Text(AppLocalizations.of(context)!.post),
           ),
         ],
       ),

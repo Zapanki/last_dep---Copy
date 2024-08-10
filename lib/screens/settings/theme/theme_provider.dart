@@ -4,8 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.light;
+  Locale? _locale;
 
   ThemeMode get themeMode => _themeMode;
+  Locale? get locale => _locale;
 
   void setThemeMode(ThemeMode themeMode) {
     _themeMode = themeMode;
@@ -25,5 +27,9 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     notifyListeners();
     saveThemeMode(_themeMode);
+  }
+  void setLocale(Locale locale) {
+    _locale = locale;
+    notifyListeners();
   }
 }

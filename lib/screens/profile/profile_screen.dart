@@ -10,6 +10,7 @@ import 'package:last_dep/screens/settings/settings_screen.dart';
 import 'package:last_dep/screens/settings/theme/theme_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   final User? user;
@@ -65,11 +66,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await widget.user!.updateDisplayName(value);
       }
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profile updated successfully')));
+          SnackBar(content: Text(AppLocalizations.of(context)!.updateSuccess)));
       setState(() {}); // Обновить интерфейс
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: ${e.toString()}')));
+          SnackBar(content: Text('${AppLocalizations.of(context)!.updateFailed} ${e.toString()}')));
     }
   }
 
@@ -80,26 +81,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context) {
         return AlertDialog(
           title: Text(
-              'Edit ${field == "display_name" ? "Nickname" : field == "phone_number" ? "Phone Number" : "Status"}'),
+              '${AppLocalizations.of(context)!.edit} ${field == "display_name" ? AppLocalizations.of(context)!.name : field == "phone_number" ? AppLocalizations.of(context)!.phoneNumber : AppLocalizations.of(context)!.status}'),
           content: TextField(
             controller: _controller,
             decoration: InputDecoration(
               labelText: field == "display_name"
-                  ? "Enter new nickname"
+                  ? AppLocalizations.of(context)!.enterNewName
                   : field == "phone_number"
-                      ? "Enter new phone number"
-                      : "Enter new status",
+                      ? AppLocalizations.of(context)!.enterNewPhoneNumber
+                      : AppLocalizations.of(context)!.enterNewStatus,
             ),
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('OK'),
+              child: Text(AppLocalizations.of(context)!.ok),
               onPressed: () {
                 _updateUserData(field, _controller.text);
                 Navigator.of(context).pop();
@@ -136,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload image: ${e.toString()}')));
+          SnackBar(content: Text('${AppLocalizations.of(context)!.imageUploadFailed} ${e.toString()}')));
     }
   }
 
@@ -150,13 +151,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       await widget.user!.updatePhotoURL(imageUrl);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profile image updated successfully')));
+          SnackBar(content: Text(AppLocalizations.of(context)!.imageUpdatedSuccessfully)));
       setState(() {
         _profileImageUrl = imageUrl; // Обновить URL изображения в состоянии
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Failed to update profile image: ${e.toString()}')));
+          content: Text('${AppLocalizations.of(context)!.imageUpdateFailed} ${e.toString()}')));
     }
   }
 
@@ -183,17 +184,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Подтверждение удаления"),
-          content: Text("Точно ли вы хотите удалить пост?"),
+          title: Text(AppLocalizations.of(context)!.confirmDelete),
+          content: Text(AppLocalizations.of(context)!.confirmDeleteMessage),
           actions: <Widget>[
             TextButton(
-              child: Text("Нет"),
+              child: Text(AppLocalizations.of(context)!.no),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text("Да"),
+              child: Text(AppLocalizations.of(context)!.yes),
               onPressed: () {
                 Navigator.of(context).pop();
                 _deletePost(post);
@@ -218,7 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: <Widget>[
             ListTile(
               leading: Icon(Icons.share),
-              title: Text('Repost to profile'),
+              title: Text(AppLocalizations.of(context)!.repostToProfile),
               onTap: () {
                 Navigator.pop(context);
                 _repostToProfile(post);
@@ -226,7 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             ListTile(
               leading: Icon(Icons.message),
-              title: Text('Send to chat'),
+              title: Text(AppLocalizations.of(context)!.sendToChat),
               onTap: () {
                 // Логика отправки в чат
               },
@@ -253,20 +254,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('User Details'),
+          title: Text(AppLocalizations.of(context)!.userDetails),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: Icon(Icons.email),
-                title: Text('Email'),
-                subtitle: Text(widget.user?.email ?? 'No email'),
+                title: Text(AppLocalizations.of(context)!.email),
+                subtitle: Text(widget.user?.email ?? AppLocalizations.of(context)!.noEmail),
               ),
               GestureDetector(
                 onTap: () => _showEditDialog('status', _statusController.text),
                 child: ListTile(
                   leading: Icon(Icons.info),
-                  title: Text('Status'),
+                  title: Text(AppLocalizations.of(context)!.status),
                   subtitle: Text(_statusController.text),
                 ),
               ),
@@ -275,18 +276,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _showEditDialog('phone_number', _phoneController.text),
                 child: ListTile(
                   leading: Icon(Icons.phone),
-                  title: Text('Phone Number'),
+                  title: Text(AppLocalizations.of(context)!.phoneNumber),
                   subtitle: Text(_phoneController.text.isEmpty
-                      ? 'No phone number'
+                      ? AppLocalizations.of(context)!.noPhoneNumber
                       : _phoneController.text),
                 ),
               ),
               ListTile(
                 leading: Icon(Icons.date_range),
-                title: Text('Member Since'),
+                title: Text(AppLocalizations.of(context)!.memberSince),
                 subtitle: Text(
                     widget.user?.metadata.creationTime?.toLocal().toString() ??
-                        'N/A'),
+                        AppLocalizations.of(context)!.na),
               ),
             ],
           ),
@@ -295,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         );
@@ -335,7 +336,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to logout: ${e.toString()}')),
+        SnackBar(content: Text('${AppLocalizations.of(context)!.logoutFailed} ${e.toString()}')),
       );
     }
   }
@@ -344,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile'),
+        title: Text(AppLocalizations.of(context)!.profile),
         actions: <Widget>[
           IconButton(
             onPressed: () {
@@ -387,14 +388,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _phoneController.text = userData['phone_number'] ?? '';
                 _displayNameController.text = userData['display_name'] ?? '';
                 _statusController.text = userData['status'] ??
-                    'Nothing here'; // Заполнение поля статуса
+                    AppLocalizations.of(context)!.nothingHere; // Заполнение поля статуса
                 _profileImageUrl =
                     userData['photo_url'] ?? widget.user?.photoURL;
               } else {
                 _phoneController.text = widget.user?.phoneNumber ?? '';
                 _displayNameController.text = widget.user?.displayName ?? '';
                 _statusController.text =
-                    'Nothing here'; // Заполнение поля статуса по умолчанию
+                    AppLocalizations.of(context)!.nothingHere; // Заполнение поля статуса по умолчанию
                 _profileImageUrl = widget.user?.photoURL;
               }
 
@@ -419,7 +420,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         ListTile(
                           leading: Icon(Icons.person),
-                          title: Text('Name'),
+                          title: Text(AppLocalizations.of(context)!.name),
                           subtitle: Text(_displayNameController.text),
                         ),
                       ],
@@ -432,7 +433,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         ListTile(
                           leading: Icon(Icons.info),
-                          title: Text('Status'),
+                          title: Text(AppLocalizations.of(context)!.status),
                           subtitle: Text(_statusController.text),
                         ),
                       ],
@@ -440,7 +441,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   ElevatedButton(
                     onPressed: _showUserDetailsDialog,
-                    child: Text('All Information'),
+                    child: Text(AppLocalizations.of(context)!.allInformation),
                   ),
                   StreamBuilder(
                     stream: FirebaseFirestore.instance
@@ -463,8 +464,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   title: Text(post['caption']),
                                   subtitle:
                                       post.data().containsKey('originalPostId')
-                                          ? Text('Reposted')
-                                          : Text('Original Post'),
+                                          ? Text(AppLocalizations.of(context)!.reposted)
+                                          : Text(AppLocalizations.of(context)!.originalPost),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [

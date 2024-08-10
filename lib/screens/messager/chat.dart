@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:last_dep/screens/messager/chat_service.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 
 class ChatScreen extends StatefulWidget {
   final String receiverUserEmail;
@@ -63,7 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
           return Center(child: CircularProgressIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No messages yet'));
+          return Center(child: Text(AppLocalizations.of(context)!.no_messages_yet));
         }
         return ListView(
           reverse: true,
@@ -118,7 +120,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Type a message',
+                hintText: AppLocalizations.of(context)!.type_a_message,
                 border: OutlineInputBorder(),
               ),
             ),

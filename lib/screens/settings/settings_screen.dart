@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:last_dep/screens/settings/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+
 
 class SettingsScreen extends StatelessWidget {
   @override
@@ -9,23 +12,22 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Settings'),
+        title: Text(AppLocalizations.of(context)!.settings),
       ),
       body: ListView(
-        padding: EdgeInsets.all(16.0),
         children: [
           SwitchListTile(
-            title: Text('Dark Mode'),
+            title: Text(AppLocalizations.of(context)!.darkMode),
             value: themeProvider.themeMode == ThemeMode.dark,
             onChanged: (value) {
               themeProvider.toggleTheme();
             },
           ),
           ListTile(
-            title: Text('Language'),
-            subtitle: Text('Select your preferred language'),
+            title: Text(AppLocalizations.of(context)!.language),
+            subtitle: Text(AppLocalizations.of(context)!.currentLanguage),
             onTap: () {
-              _showLanguageDialog(context);
+              showLanguageDialog(context);
             },
           ),
         ],
@@ -33,34 +35,36 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showLanguageDialog(BuildContext context) {
+  void showLanguageDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Select Language'),
+          title: Text(AppLocalizations.of(context)!.chooseLanguage),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: <Widget>[
               ListTile(
                 title: Text('English'),
                 onTap: () {
-                  // Handle language change to English
-                  Navigator.of(context).pop();
+                  updateLocale(context, Locale('en'));
                 },
               ),
               ListTile(
-                title: Text('Russian'),
+                title: Text('Русский'),
                 onTap: () {
-                  // Handle language change to Russian
-                  Navigator.of(context).pop();
+                  updateLocale(context, Locale('ru'));
                 },
               ),
-              // Add more languages here
             ],
           ),
         );
       },
     );
+  }
+
+  void updateLocale(BuildContext context, Locale locale) {
+    Provider.of<ThemeProvider>(context, listen: false).setLocale(locale);
+    Navigator.of(context).pop();
   }
 }
