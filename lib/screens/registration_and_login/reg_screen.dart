@@ -100,6 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'name': _nameController.text,
         'email': _emailController.text,
         'uid': userCredential.user!.uid,
+        'language': 'en',
       });
 
       Navigator.pushReplacement(

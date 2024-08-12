@@ -34,6 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (userData != null) {
         themeProvider.setThemeMode(
             userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
+            final locale = Locale(userData['language'] ?? 'en');
+            themeProvider.setLocale(locale);
       }
       Navigator.pushReplacement(
         context,
@@ -73,11 +75,15 @@ class _LoginScreenState extends State<LoginScreen> {
               'light', // Установка темы по умолчанию при первом входе с Google
         });
         themeProvider.setThemeMode(ThemeMode.light);
+        themeProvider.setLocale(Locale('en'));
       } else {
         final userData = userDoc.data() as Map<String, dynamic>?;
         if (userData != null) {
           themeProvider.setThemeMode(
               userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
+
+              final locale = Locale(userData['language'] ?? 'en');
+        themeProvider.setLocale(locale);
         }
       }
 
