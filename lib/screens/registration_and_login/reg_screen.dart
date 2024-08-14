@@ -154,10 +154,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(40),
         child: Column(
@@ -165,6 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: <Widget>[
             Column(
               children: <Widget>[
+                SizedBox(height: 20),
                 Text(
                   "Register",
                   style: TextStyle(

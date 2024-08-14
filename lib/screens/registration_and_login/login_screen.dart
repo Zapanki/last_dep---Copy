@@ -7,6 +7,7 @@ import 'package:last_dep/screens/settings/theme/theme_provider.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_button/sign_in_button.dart';
 import 'reg_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -34,8 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (userData != null) {
         themeProvider.setThemeMode(
             userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
-            final locale = Locale(userData['language'] ?? 'en');
-            themeProvider.setLocale(locale);
+        final locale = Locale(userData['language'] ?? 'en');
+        themeProvider.setLocale(locale);
       }
       Navigator.pushReplacement(
         context,
@@ -75,21 +76,21 @@ class _LoginScreenState extends State<LoginScreen> {
               'light', // Установка темы по умолчанию при первом входе с Google
         });
         themeProvider.setThemeMode(ThemeMode.light);
-        themeProvider.setLocale(Locale('en'));
+        themeProvider.setLocale(const Locale('en'));
       } else {
         final userData = userDoc.data() as Map<String, dynamic>?;
         if (userData != null) {
           themeProvider.setThemeMode(
               userData['theme'] == 'dark' ? ThemeMode.dark : ThemeMode.light);
 
-              final locale = Locale(userData['language'] ?? 'en');
-        themeProvider.setLocale(locale);
+          final locale = Locale(userData['language'] ?? 'en');
+          themeProvider.setLocale(locale);
         }
       }
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } catch (e) {
       _showErrorDialog("Failed to sign in with Google: $e");
@@ -101,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text("Error"),
+          title: const Text("Error"),
           content: Text(message),
           actions: [
             TextButton(
@@ -121,25 +122,28 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
+            const SizedBox(height: 20),
             Column(
               children: <Widget>[
-                Text(
+                const Text(
                   "Login",
                   style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Colors.black),
                 ),
-                SizedBox(height: 20),
+                SizedBox(
+                  height: 150, // Укажите подходящую высоту для анимации
+                  width: 150, // Укажите подходящую ширину для анимации
+                  child: Lottie.asset(
+                      'assets/animations/Animation - 1721162487226.json'),
+                ),
+                const SizedBox(height: 20),
                 Text(
                   "Login to your account",
                   style: TextStyle(
@@ -149,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             Column(
               children: <Widget>[
                 inputField(
@@ -169,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(vertical: 10),
@@ -196,102 +200,87 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'Or continue with:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: MaterialButton(
-                height: 70,
+              width: double.infinity, // Кнопка занимает всю ширину экрана
+              height: 70, // Устанавливаем высоту кнопки
+              child: SignInButton(
+                Buttons.google,
+                text: "Login with Google",
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                 onPressed: () {
                   _loginWithGoogle(context);
                 },
-                color: Colors.red,
-                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Image.asset(
-                      'assets/images/google.png', // Путь к вашей картинке Google
-                      height: 30.0,
-                      width: 30.0,
-                    ),
-                    SizedBox(width: 10), // Отступ между иконкой и текстом
-                    Text(
-                      "Login with Google",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(50), // Скругленные углы
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Text("Don't have an account? "),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => RegisterScreen()),
-                    );
-                  },
-                  child: Text(
-                    "Register",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Color(0xff0095FF),
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text("Don't have an account? "),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => RegisterScreen()),
+                          );
+                        },
+                        child: Text(
+                          "Register",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Color(0xff0095FF),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      const SizedBox(
+                          height:
+                              20), // Добавляет отступ сверху для правой колонки
+                      Text("Forgot Password?"),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ResetPasswordScreen()),
+                          );
+                        },
+                        child: Text(
+                          "Reset",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Color(0xff0095FF),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text("Forgot Password? "),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => ResetPasswordScreen()),
-                      );
-                    },
-                    child: Text(
-                      "Reset",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Color(0xff0095FF),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            SizedBox(
+            const SizedBox(
               height: 10,
-            ),
-            SizedBox(
-              height: 150, // Укажите подходящую высоту для анимации
-              width: 150, // Укажите подходящую ширину для анимации
-              child: Lottie.asset(
-                  'assets/animations/Animation - 1721162487226.json'),
             ),
           ],
         ),
