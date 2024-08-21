@@ -43,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'display_name': widget.user!.displayName ?? 'No display name',
         'phone_number': widget.user!.phoneNumber ?? 'No phone number',
         'photo_url': widget.user!.photoURL ?? '',
-        'status': 'Nothing here',
+        'status': 'nothing here',
         'theme': 'light', // Установка темы по умолчанию
       });
       doc = await FirebaseFirestore.instance
@@ -69,8 +69,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SnackBar(content: Text(AppLocalizations.of(context)!.updateSuccess)));
       setState(() {}); // Обновить интерфейс
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)!.updateFailed} ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '${AppLocalizations.of(context)!.updateFailed} ${e.toString()}')));
     }
   }
 
@@ -136,8 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _updateUserProfileImage(downloadURL);
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)!.imageUploadFailed} ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '${AppLocalizations.of(context)!.imageUploadFailed} ${e.toString()}')));
     }
   }
 
@@ -150,14 +152,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'photo_url': imageUrl,
       });
       await widget.user!.updatePhotoURL(imageUrl);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.imageUpdatedSuccessfully)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.imageUpdatedSuccessfully)));
       setState(() {
         _profileImageUrl = imageUrl; // Обновить URL изображения в состоянии
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${AppLocalizations.of(context)!.imageUpdateFailed} ${e.toString()}')));
+          content: Text(
+              '${AppLocalizations.of(context)!.imageUpdateFailed} ${e.toString()}')));
     }
   }
 
@@ -210,33 +214,126 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await FirebaseFirestore.instance.collection('posts').doc(post.id).delete();
   }
 
+  void _showUserSelection(BuildContext context, DocumentSnapshot post) {
+  showModalBottomSheet(
+    context: context,
+    builder: (context) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('users').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          var users = snapshot.data!.docs.where((doc) => doc.id != FirebaseAuth.instance.currentUser!.uid).toList();
+
+          if (users.isEmpty) {
+            return Center(child: Text(AppLocalizations.of(context)!.no_other_users_available));
+          }
+
+          return ListView.builder(
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              Map<String, dynamic> userData = users[index].data() as Map<String, dynamic>;
+              String displayName = userData['display_name'] ?? 'Unknown';
+              String photoUrl = userData['photo_url'] ??
+                  "https://firebasestorage.googleapis.com/v0/b/last-dep.appspot.com/o/profile_images%2Fuserprofile.png?alt=media&token=ff97d361-d7e1-4845-8b5e-f5865b5522ae";
+              String userId = users[index].id;
+
+              return ListTile(
+                title: Text(displayName),
+                leading: CircleAvatar(
+                  backgroundImage: NetworkImage(photoUrl),
+                ),
+                trailing: ElevatedButton(
+                  child: Text(AppLocalizations.of(context)!.send),
+                  onPressed: () {
+                    _sendPostToChat(userId, post);
+                    Navigator.pop(context); // Close the bottom sheet
+                  },
+                ),
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}
+
+
+
+
+  void _sendPostToChat(String receiverUserId, DocumentSnapshot post) async {
+  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+  final String currentUserEmail = FirebaseAuth.instance.currentUser!.email ?? 'Unknown';
+  final String currentUserName = await _getUserName(currentUserId);
+  final Timestamp timestamp = Timestamp.now();
+
+  // Create the message content for the post
+  String message = '${AppLocalizations.of(context)!.sharedPost}: ${post['caption']}';
+  String imageUrl = post['imageUrl'];
+
+  // Send the post as a message
+  await FirebaseFirestore.instance
+      .collection('chat_rooms')
+      .doc(_generateChatRoomId(currentUserId, receiverUserId))
+      .collection('messages')
+      .add({
+    'senderId': currentUserId,
+    'senderEmail': currentUserEmail,
+    'senderName': currentUserName,
+    'message': message,
+    'timestamp': timestamp,
+    'isFile': true,
+    'fileUrl': imageUrl,
+    'postCaption': post['caption'],
+    'postAuthor': currentUserName,
+  });
+}
+
+
+String _generateChatRoomId(String user1Id, String user2Id) {
+  return user1Id.compareTo(user2Id) < 0 ? "$user1Id\_$user2Id" : "$user2Id\_$user1Id";
+}
+
+Future<String> _getUserName(String userId) async {
+  DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  return userDoc['display_name'] ?? 'Unknown';
+}
+
+
   void _showRepostOptions(BuildContext context, DocumentSnapshot post) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              leading: Icon(Icons.share),
-              title: Text(AppLocalizations.of(context)!.repostToProfile),
-              onTap: () {
-                Navigator.pop(context);
-                _repostToProfile(post);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.message),
-              title: Text(AppLocalizations.of(context)!.sendToChat),
-              onTap: () {
-                // Логика отправки в чат
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  showModalBottomSheet(
+    context: context,
+    builder: (BuildContext context) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ListTile(
+            leading: Icon(Icons.share),
+            title: Text(AppLocalizations.of(context)!.repostToProfile),
+            onTap: () {
+              Navigator.pop(context);
+              _repostToProfile(post);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.message),
+            title: Text(AppLocalizations.of(context)!.sendToChat),
+            onTap: () {
+              _showUserSelection(context, post);
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   void _repostToProfile(DocumentSnapshot post) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -246,6 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'caption': post['caption'],
       'imageUrl': post['imageUrl'],
       'timestamp': FieldValue.serverTimestamp(),
+      "likes": [],
     });
   }
 
@@ -261,7 +359,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 leading: Icon(Icons.email),
                 title: Text(AppLocalizations.of(context)!.email),
-                subtitle: Text(widget.user?.email ?? AppLocalizations.of(context)!.noEmail),
+                subtitle: Text(widget.user?.email ??
+                    AppLocalizations.of(context)!.noEmail),
               ),
               GestureDetector(
                 onTap: () => _showEditDialog('status', _statusController.text),
@@ -336,7 +435,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppLocalizations.of(context)!.logoutFailed} ${e.toString()}')),
+        SnackBar(
+            content: Text(
+                '${AppLocalizations.of(context)!.logoutFailed} ${e.toString()}')),
       );
     }
   }
@@ -360,13 +461,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icon(Icons.logout),
             onPressed: () {
               FirebaseAuth.instance.signOut();
-              final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-              themeProvider.setThemeMode(ThemeMode.light); // Сброс темы на значение по умолчанию
+              final themeProvider =
+                  Provider.of<ThemeProvider>(context, listen: false);
+              themeProvider.setThemeMode(
+                  ThemeMode.light); // Сброс темы на значение по умолчанию
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => LoginScreen()),
               );
-              },
+            },
           ),
         ],
       ),
@@ -387,15 +490,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (userData != null) {
                 _phoneController.text = userData['phone_number'] ?? '';
                 _displayNameController.text = userData['display_name'] ?? '';
-                _statusController.text = userData['status'] ??
-                    AppLocalizations.of(context)!.nothingHere; // Заполнение поля статуса
+                _statusController.text =
+                    userData['status'] ?? ''; // Заполнение поля статуса
                 _profileImageUrl =
                     userData['photo_url'] ?? widget.user?.photoURL;
               } else {
                 _phoneController.text = widget.user?.phoneNumber ?? '';
                 _displayNameController.text = widget.user?.displayName ?? '';
-                _statusController.text =
-                    AppLocalizations.of(context)!.nothingHere; // Заполнение поля статуса по умолчанию
+                _statusController.text = AppLocalizations.of(context)!
+                    .nothingHere; // Заполнение поля статуса по умолчанию
                 _profileImageUrl = widget.user?.photoURL;
               }
 
@@ -464,8 +567,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   title: Text(post['caption']),
                                   subtitle:
                                       post.data().containsKey('originalPostId')
-                                          ? Text(AppLocalizations.of(context)!.reposted)
-                                          : Text(AppLocalizations.of(context)!.originalPost),
+                                          ? Text(AppLocalizations.of(context)!
+                                              .reposted)
+                                          : Text(AppLocalizations.of(context)!
+                                              .originalPost),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -473,6 +578,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         icon: Icon(Icons.thumb_up),
                                         onPressed: () => _toggleLike(post),
                                       ),
+                                      Text('${post['likes'].length}'),
                                       IconButton(
                                         icon: Icon(Icons.delete),
                                         onPressed: () =>

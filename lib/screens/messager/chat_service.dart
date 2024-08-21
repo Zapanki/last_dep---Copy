@@ -6,8 +6,11 @@ import 'package:last_dep/screens/messager/message.dart';
 class ChatService extends ChangeNotifier {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String generateChatRoomId(String user1Id, String user2Id) {
+    return user1Id.compareTo(user2Id) < 0 ? "$user1Id\_$user2Id" : "$user2Id\_$user1Id";
+  }
 
-  Future<void> sendMessage(String receiverId, String message) async {
+  Future<void> sendMessage(String receiverId, String message, {bool isFile = false, String? fileName}) async {
     final String currentUserId = _firebaseAuth.currentUser!.uid;
     final String currentUserEmail = _firebaseAuth.currentUser!.email ?? 'Unknown';
     final String currentUserName = await getDisplayName(currentUserId);
@@ -20,6 +23,8 @@ class ChatService extends ChangeNotifier {
       message: message,
       timestamp: timestamp,
       receiverId: receiverId,
+      isFile: isFile,
+      fileName: fileName ?? '',
     );
 
     List<String> ids = [currentUserId, receiverId];

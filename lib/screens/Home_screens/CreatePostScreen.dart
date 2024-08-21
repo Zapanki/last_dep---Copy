@@ -6,7 +6,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-
 class CreatePostScreen extends StatefulWidget {
   @override
   _CreatePostScreenState createState() => _CreatePostScreenState();
@@ -56,32 +55,104 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     Navigator.of(context).pop();
   }
 
+  void _showFullImage(File image) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(backgroundColor: Colors.transparent),
+          backgroundColor: Colors.black,
+          body: Center(
+            child: Image.file(image),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.create_post),
+        backgroundColor: Colors.transparent, // Remove color from AppBar
+        elevation: 0,
       ),
-      body: Column(
-        children: [
-          TextField(
-            controller: _captionController,
-            decoration: InputDecoration(hintText: AppLocalizations.of(context)!.enter_a_caption),
-          ),
-          SizedBox(height: 10),
-          _image == null
-              ? Text(AppLocalizations.of(context)!.no_image_selected)
-              : Image.file(_image!),
-          SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: _pickImage,
-            child: Text(AppLocalizations.of(context)!.pick_Image),
-          ),
-          ElevatedButton(
-            onPressed: _uploadPost,
-            child: Text(AppLocalizations.of(context)!.post),
-          ),
-        ],
+      body: Padding(
+        padding: const EdgeInsets.all(16.0), // Add padding around the content
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, // Align children to the start
+          children: [
+            TextField(
+              controller: _captionController,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.enter_a_caption,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: BorderSide(
+                    color: Colors.grey[400]!,
+                    width: 2.0,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              ),
+            ),
+            SizedBox(height: 20),
+            _image == null
+                ? Center(
+                    child: Text(
+                      AppLocalizations.of(context)!.no_image_selected,
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                  )
+                : GestureDetector(
+                    onTap: () => _showFullImage(_image!), // Open image in full screen on tap
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12.0),
+                      child: Image.file(
+                        _image!,
+                        height: 350, // Make the image larger
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+            SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: _pickImage,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent, // Button color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12), // Rounded corners
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15), // Add padding inside button
+                ),
+                child: Text(
+                  AppLocalizations.of(context)!.pick_Image,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            Center(
+              child: ElevatedButton(
+                onPressed: _uploadPost,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green, // Button color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12), // Rounded corners
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15), // Add padding inside button
+                ),
+                child: Text(
+                  AppLocalizations.of(context)!.post,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

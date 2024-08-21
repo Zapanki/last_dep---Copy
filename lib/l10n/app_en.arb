@@ -65,7 +65,7 @@
   "choose_user": "Choose user",
   "no_name": "No name",
   "no_other_users_available": "No other users available",
-  "user_not_found": "Пользователь не найден",
+  "user_not_found": "User not found",
   "deletion_confirmation": "Deletion confirmation",
   "are_you_sure_you_want_to_delete_the_post": "Are you sure you want to delete the post?",
   "home_page": "Home Page",
@@ -74,5 +74,14 @@
   "enter_a_caption": "Enter a caption",
   "no_image_selected": "No image selected.",
   "pick_Image": "Pick Image",
-  "post": "Post"
+  "post": "Post",
+  "loading": "Loading",
+  "error_loading_messages": "Error loading messages",
+  "sharedPost": "Post was shared",
+  "send": "Send",
+  "replyingTo": "Replying to: {user}",
+  "delete": "Delete",
+  "reply": "Reply",
+  "selectOption": "Select Option"
+
   }

@@ -74,5 +74,13 @@
   "enter_a_caption": "Введите описание",
   "no_image_selected": "Изображение не выбрано.",
   "pick_Image": "Выбрать изображение",
-  "post": "Пост"
+  "post": "Пост",
+  "loading": "Загрузка",
+  "error_loading_messages": "Ошибка загрузки сообщений",
+  "sharedPost": "Пост был опубликован",
+  "send": "Отправить",
+  "replyingTo": "Ответ на: {user}",
+  "delete": "Удалить",
+  "reply": "Ответить",
+  "selectOption": "Выберите Опцию"
 }
