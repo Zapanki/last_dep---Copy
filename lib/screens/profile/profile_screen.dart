@@ -318,14 +318,42 @@ Future<String> _getUserName(String userId) async {
             title: Text(AppLocalizations.of(context)!.repostToProfile),
             onTap: () {
               Navigator.pop(context);
-              _repostToProfile(post);
+              _showRepostConfirmationDialog(post);
             },
           ),
           ListTile(
             leading: Icon(Icons.message),
             title: Text(AppLocalizations.of(context)!.sendToChat),
             onTap: () {
+              Navigator.pop(context);
               _showUserSelection(context, post);
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _showRepostConfirmationDialog(DocumentSnapshot post) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(AppLocalizations.of(context)!.confirmRepost),
+        content: Text(AppLocalizations.of(context)!.confirmRepostMessage),
+        actions: <Widget>[
+          TextButton(
+            child: Text(AppLocalizations.of(context)!.no),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text(AppLocalizations.of(context)!.yes),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _repostToProfile(post);
             },
           ),
         ],

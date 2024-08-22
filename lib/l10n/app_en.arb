@@ -82,6 +82,8 @@
   "replyingTo": "Replying to: {user}",
   "delete": "Delete",
   "reply": "Reply",
-  "selectOption": "Select Option"
+  "selectOption": "Select Option",
+  "confirmRepost": "Are you sure you want to repost this post?",
+  "confirmRepostMessage": "Are you sure you want to repost this post?"
 
   }

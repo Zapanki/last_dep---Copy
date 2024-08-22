@@ -82,5 +82,7 @@
   "replyingTo": "Ответ на: {user}",
   "delete": "Удалить",
   "reply": "Ответить",
-  "selectOption": "Выберите Опцию"
+  "selectOption": "Выберите Опцию",
+  "confirmRepost": "Вы уверены, что хотите репостить этот пост?",
+  "confirmRepostMessage": "Вы уверены, что хотите репостить этот пост?"
 }
