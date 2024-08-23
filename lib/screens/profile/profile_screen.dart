@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:last_dep/screens/registration_and_login/login_screen.dart';
 import 'package:last_dep/screens/Home_screens/CreatePostScreen.dart';
 import 'package:last_dep/screens/settings/settings_screen.dart';
@@ -26,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _displayNameController;
   late TextEditingController _statusController;
+  final TextEditingController _commentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
   String? _profileImageUrl;
@@ -52,6 +55,222 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .get();
     }
     return doc.data() as Map<String, dynamic>?;
+  }
+
+  Future<void> _addComment(String postId, String commentText) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      DocumentReference postRef =
+          FirebaseFirestore.instance.collection('posts').doc(postId);
+
+      // Создание объекта комментария
+      Map<String, dynamic> commentData = {
+        'commentText': commentText,
+        'photo_url': user.photoURL ?? 'assets/images/userprofile.png',
+        'commentAuthor': user.displayName,
+        'timestamp': Timestamp.now(), // Время на сервере
+      };
+
+      // Обновление документа поста с добавлением комментария
+      await postRef.update({
+        'comments': FieldValue.arrayUnion([commentData])
+      });
+
+      _commentController.clear();
+    }
+  }
+
+  Future<void> _deleteComment(String postId, int commentIndex) async {
+    DocumentReference postRef =
+        FirebaseFirestore.instance.collection('posts').doc(postId);
+
+    DocumentSnapshot postSnapshot = await postRef.get();
+    List<dynamic> comments = postSnapshot['comments'];
+
+    comments.removeAt(commentIndex);
+
+    await postRef.update({'comments': comments});
+  }
+
+  void _showDeleteCommentDialog(String postId, int commentIndex) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)!.deletion_confirmation_comment),
+          content: Text(AppLocalizations.of(context)!.deletion_confirmation_comment),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(AppLocalizations.of(context)!.no),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _deleteComment(postId, commentIndex);
+                Navigator.of(context).pop();
+              },
+              child: Text(AppLocalizations.of(context)!.yes),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCommentOptionsDialog(BuildContext context, String postId,
+      int commentIndex, String commentText, String commentAuthor) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)!.selectAction),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.copy),
+                title: Text(AppLocalizations.of(context)!.copyComment),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Clipboard.setData(ClipboardData(text: commentText));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text(AppLocalizations.of(context)!.commentCopied)),
+                  );
+                },
+              ),
+              if (user != null && user.displayName == commentAuthor)
+                ListTile(
+                  leading: Icon(Icons.delete),
+                  title: Text(AppLocalizations.of(context)!.deleteComment),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showDeleteCommentDialog(postId, commentIndex);
+                  },
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(AppLocalizations.of(context)!.cancel),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showComments(DocumentSnapshot post) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)!.comments),
+          content: Container(
+            width: double.maxFinite,
+            height: 300.0,
+            child: Column(
+              children: [
+                Expanded(
+                  child: StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('posts')
+                        .doc(post.id)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+
+                      var postData = snapshot.data;
+                      var comments = postData?['comments'] ?? [];
+
+                      if (comments.isEmpty) {
+                        return Center(
+                            child: Text(
+                                AppLocalizations.of(context)!.noCommentsYet));
+                      }
+
+                      return ListView.builder(
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          final comment = comments[index];
+                          final photoUrl = comment['photo_url'] ??
+                              'assets/images/userprofile.png';
+
+                          return ListTile(
+                            title: Text(comment['commentAuthor']),
+                            subtitle: Text(comment['commentText']),
+                            leading: CircleAvatar(
+                              backgroundImage: photoUrl.startsWith('http')
+                                  ? NetworkImage(photoUrl)
+                                  : AssetImage('assets/images/userprofile.png')
+                                      as ImageProvider,
+                            ),
+                            trailing: Text(
+                              comment['timestamp'] != null
+                                  ? DateFormat('dd MMM kk:mm')
+                                      .format(comment['timestamp'].toDate())
+                                  : '',
+                            ),
+                            onLongPress: () {
+                              _showCommentOptionsDialog(
+                                context,
+                                post.id,
+                                index,
+                                comment['commentText'],
+                                comment['commentAuthor'],
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        decoration: InputDecoration(
+                          labelText: AppLocalizations.of(context)!.addComment,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.send),
+                      onPressed: () {
+                        if (_commentController.text.isNotEmpty) {
+                          _addComment(post.id, _commentController.text);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(AppLocalizations.of(context)!.close),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _updateUserData(String field, String value) async {
@@ -215,153 +434,158 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showUserSelection(BuildContext context, DocumentSnapshot post) {
-  showModalBottomSheet(
-    context: context,
-    builder: (context) {
-      return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('users').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
 
-          var users = snapshot.data!.docs.where((doc) => doc.id != FirebaseAuth.instance.currentUser!.uid).toList();
+            var users = snapshot.data!.docs
+                .where(
+                    (doc) => doc.id != FirebaseAuth.instance.currentUser!.uid)
+                .toList();
 
-          if (users.isEmpty) {
-            return Center(child: Text(AppLocalizations.of(context)!.no_other_users_available));
-          }
+            if (users.isEmpty) {
+              return Center(
+                  child: Text(
+                      AppLocalizations.of(context)!.no_other_users_available));
+            }
 
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              Map<String, dynamic> userData = users[index].data() as Map<String, dynamic>;
-              String displayName = userData['display_name'] ?? 'Unknown';
-              String photoUrl = userData['photo_url'] ??
-                  "https://firebasestorage.googleapis.com/v0/b/last-dep.appspot.com/o/profile_images%2Fuserprofile.png?alt=media&token=ff97d361-d7e1-4845-8b5e-f5865b5522ae";
-              String userId = users[index].id;
+            return ListView.builder(
+              itemCount: users.length,
+              itemBuilder: (context, index) {
+                Map<String, dynamic> userData =
+                    users[index].data() as Map<String, dynamic>;
+                String displayName = userData['display_name'] ?? 'Unknown';
+                String photoUrl = userData['photo_url'] ??
+                    "https://firebasestorage.googleapis.com/v0/b/last-dep.appspot.com/o/profile_images%2Fuserprofile.png?alt=media&token=ff97d361-d7e1-4845-8b5e-f5865b5522ae";
+                String userId = users[index].id;
 
-              return ListTile(
-                title: Text(displayName),
-                leading: CircleAvatar(
-                  backgroundImage: NetworkImage(photoUrl),
-                ),
-                trailing: ElevatedButton(
-                  child: Text(AppLocalizations.of(context)!.send),
-                  onPressed: () {
-                    _sendPostToChat(userId, post);
-                    Navigator.pop(context); // Close the bottom sheet
-                  },
-                ),
-              );
-            },
-          );
-        },
-      );
-    },
-  );
-}
-
-
-
+                return ListTile(
+                  title: Text(displayName),
+                  leading: CircleAvatar(
+                    backgroundImage: NetworkImage(photoUrl),
+                  ),
+                  trailing: ElevatedButton(
+                    child: Text(AppLocalizations.of(context)!.send),
+                    onPressed: () {
+                      _sendPostToChat(userId, post);
+                      Navigator.pop(context); // Close the bottom sheet
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
 
   void _sendPostToChat(String receiverUserId, DocumentSnapshot post) async {
-  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
-  final String currentUserEmail = FirebaseAuth.instance.currentUser!.email ?? 'Unknown';
-  final String currentUserName = await _getUserName(currentUserId);
-  final Timestamp timestamp = Timestamp.now();
+    final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final String currentUserEmail =
+        FirebaseAuth.instance.currentUser!.email ?? 'Unknown';
+    final String currentUserName = await _getUserName(currentUserId);
+    final Timestamp timestamp = Timestamp.now();
 
-  // Create the message content for the post
-  String message = '${AppLocalizations.of(context)!.sharedPost}: ${post['caption']}';
-  String imageUrl = post['imageUrl'];
+    // Create the message content for the post
+    String message =
+        '${AppLocalizations.of(context)!.sharedPost}: ${post['caption']}';
+    String imageUrl = post['imageUrl'];
 
-  // Send the post as a message
-  await FirebaseFirestore.instance
-      .collection('chat_rooms')
-      .doc(_generateChatRoomId(currentUserId, receiverUserId))
-      .collection('messages')
-      .add({
-    'senderId': currentUserId,
-    'senderEmail': currentUserEmail,
-    'senderName': currentUserName,
-    'message': message,
-    'timestamp': timestamp,
-    'isFile': true,
-    'fileUrl': imageUrl,
-    'postCaption': post['caption'],
-    'postAuthor': currentUserName,
-  });
-}
+    // Send the post as a message
+    await FirebaseFirestore.instance
+        .collection('chat_rooms')
+        .doc(_generateChatRoomId(currentUserId, receiverUserId))
+        .collection('messages')
+        .add({
+      'senderId': currentUserId,
+      'senderEmail': currentUserEmail,
+      'senderName': currentUserName,
+      'message': message,
+      'timestamp': timestamp,
+      'isFile': true,
+      'fileUrl': imageUrl,
+      'postCaption': post['caption'],
+      'postAuthor': currentUserName,
+    });
+  }
 
+  String _generateChatRoomId(String user1Id, String user2Id) {
+    return user1Id.compareTo(user2Id) < 0
+        ? "$user1Id\_$user2Id"
+        : "$user2Id\_$user1Id";
+  }
 
-String _generateChatRoomId(String user1Id, String user2Id) {
-  return user1Id.compareTo(user2Id) < 0 ? "$user1Id\_$user2Id" : "$user2Id\_$user1Id";
-}
-
-Future<String> _getUserName(String userId) async {
-  DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-  return userDoc['display_name'] ?? 'Unknown';
-}
-
+  Future<String> _getUserName(String userId) async {
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    return userDoc['display_name'] ?? 'Unknown';
+  }
 
   void _showRepostOptions(BuildContext context, DocumentSnapshot post) {
-  showModalBottomSheet(
-    context: context,
-    builder: (BuildContext context) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ListTile(
-            leading: Icon(Icons.share),
-            title: Text(AppLocalizations.of(context)!.repostToProfile),
-            onTap: () {
-              Navigator.pop(context);
-              _showRepostConfirmationDialog(post);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.message),
-            title: Text(AppLocalizations.of(context)!.sendToChat),
-            onTap: () {
-              Navigator.pop(context);
-              _showUserSelection(context, post);
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text(AppLocalizations.of(context)!.repostToProfile),
+              onTap: () {
+                Navigator.pop(context);
+                _showRepostConfirmationDialog(post);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.message),
+              title: Text(AppLocalizations.of(context)!.sendToChat),
+              onTap: () {
+                Navigator.pop(context);
+                _showUserSelection(context, post);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-void _showRepostConfirmationDialog(DocumentSnapshot post) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(AppLocalizations.of(context)!.confirmRepost),
-        content: Text(AppLocalizations.of(context)!.confirmRepostMessage),
-        actions: <Widget>[
-          TextButton(
-            child: Text(AppLocalizations.of(context)!.no),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text(AppLocalizations.of(context)!.yes),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _repostToProfile(post);
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
-
+  void _showRepostConfirmationDialog(DocumentSnapshot post) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)!.confirmRepost),
+          content: Text(AppLocalizations.of(context)!.confirmRepostMessage),
+          actions: <Widget>[
+            TextButton(
+              child: Text(AppLocalizations.of(context)!.no),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text(AppLocalizations.of(context)!.yes),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _repostToProfile(post);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _repostToProfile(DocumentSnapshot post) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -607,6 +831,10 @@ void _showRepostConfirmationDialog(DocumentSnapshot post) {
                                         onPressed: () => _toggleLike(post),
                                       ),
                                       Text('${post['likes'].length}'),
+                                      IconButton(
+                                        icon: Icon(Icons.comment),
+                                        onPressed: () => _showComments(post),
+                                      ),
                                       IconButton(
                                         icon: Icon(Icons.delete),
                                         onPressed: () =>

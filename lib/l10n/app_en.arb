@@ -84,6 +84,14 @@
   "reply": "Reply",
   "selectOption": "Select Option",
   "confirmRepost": "Are you sure you want to repost this post?",
-  "confirmRepostMessage": "Are you sure you want to repost this post?"
+  "confirmRepostMessage": "Are you sure you want to repost this post?",
+  "comments": "Comments",
+  "noCommentsYet": "No comments yet",
+  "addComment": "Add Comment",
+  "selectAction": "Select Action",
+  "copyComment": "Copy Comment",
+  "commentCopied": "Comment copied to clipboard",
+  "deleteComment": "Delete Comment",
+  "deletion_confirmation_comment": "Are you sure you want to delete this comment?"
 
   }

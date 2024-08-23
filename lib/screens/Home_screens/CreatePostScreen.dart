@@ -49,6 +49,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       'imageUrl': downloadUrl,
       'caption': _captionController.text,
       'timestamp': Timestamp.now(),
+      'comments': [],
       'likes': [], // добавляем поле лайков как пустой список
     });
 
