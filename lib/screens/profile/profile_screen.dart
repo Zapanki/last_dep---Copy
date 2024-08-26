@@ -98,8 +98,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(AppLocalizations.of(context)!.deletion_confirmation_comment),
-          content: Text(AppLocalizations.of(context)!.deletion_confirmation_comment),
+          title:
+              Text(AppLocalizations.of(context)!.deletion_confirmation_comment),
+          content:
+              Text(AppLocalizations.of(context)!.deletion_confirmation_comment),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -637,9 +639,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 leading: Icon(Icons.date_range),
                 title: Text(AppLocalizations.of(context)!.memberSince),
                 subtitle: Text(
-                    widget.user?.metadata.creationTime?.toLocal().toString() ??
-                        AppLocalizations.of(context)!.na),
-              ),
+                  widget.user?.metadata.creationTime != null
+                      ? DateFormat('dd MMM yyyy')
+                          .format(widget.user!.metadata.creationTime!.toLocal())
+                      : AppLocalizations.of(context)!.na,
+                ),
+              )
             ],
           ),
           actions: [

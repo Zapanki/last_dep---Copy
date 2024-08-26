@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:last_dep/screens/registration_and_login/intro_page.dart';
 import 'package:last_dep/screens/registration_and_login/login_screen.dart';
 import 'package:last_dep/screens/home.dart'; 
 import 'package:provider/provider.dart';
@@ -57,7 +58,7 @@ class AuthChecker extends StatelessWidget {
         }
 
         // Если пользователь не авторизован, показываем экран входа
-        return LoginScreen();
+        return IntroPage();
       },
     );
   }

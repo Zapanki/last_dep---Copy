@@ -24,6 +24,7 @@ class _AdditionalInfoScreenState extends State<AdditionalInfoScreen> {
           'phone_number': phoneNumber,
           'gender': gender,
           'display_name': displayName,
+          'email': user.email,
         });
         await user.updateDisplayName(displayName); // Обновляем displayName в Firebase Auth
         Navigator.of(context).pushReplacement(

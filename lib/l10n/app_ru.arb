@@ -92,5 +92,6 @@
   "copyComment": "Копировать Комментарий",
   "commentCopied": "Комментарий скопирован в буфер обмена",
   "deleteComment": "Удалить Комментарий",
-  "deletion_confirmation_comment": "Вы уверены, что хотите удалить этот комментарий?"
+  "deletion_confirmation_comment": "Вы уверены, что хотите удалить этот комментарий?",
+  "likes": "Лайков"
 }

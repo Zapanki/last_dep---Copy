@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:last_dep/screens/Home_screens/home_screen.dart';
+import 'package:last_dep/screens/registration_and_login/additional_Info_screen.dart';
 import 'package:last_dep/screens/registration_and_login/login_screen.dart';
 
 
@@ -100,7 +101,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     if (isEmailVerified) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
+        MaterialPageRoute(builder: (context) => AdditionalInfoScreen()),
       );
     } else {
       _showErrorDialog('Email not verified', 'Please verify your email before proceeding.');

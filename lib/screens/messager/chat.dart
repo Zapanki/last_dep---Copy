@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:last_dep/screens/messager/users_list.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/services.dart';
 
@@ -86,6 +87,12 @@ class _ChatScreenState extends State<ChatScreen> {
     DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
     return userDoc['display_name'] ?? 'Unknown';
   }
+
+  Future<String?> _getUserPhotoUrl() async {
+  DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.receiverUserId).get();
+  return userDoc['photo_url'] as String?;
+}
+
 
   void _showMessageOptionsDialog(DocumentSnapshot document) {
     showDialog(
@@ -378,15 +385,52 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.receiverUserEmail)),
-      body: Column(
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back),
+        onPressed: () {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => UserList()));
+        },
+      ),
+      title: Row(
         children: [
-          Expanded(child: _buildMessageList()),
-          _buildMessageInput(),
+          FutureBuilder<String?>(
+            future: _getUserPhotoUrl(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                );
+              } else if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+                return Icon(Icons.account_circle);
+              } else {
+                return CircleAvatar(
+                  backgroundImage: NetworkImage(snapshot.data!),
+                );
+              }
+            },
+          ),
+          SizedBox(width: 10), // Добавьте немного пространства между аватаром и текстом
+          Expanded(
+            child: Text(
+              widget.receiverUserEmail,
+              style: TextStyle(fontSize: 18), // Вы можете настроить размер текста
+              overflow: TextOverflow.ellipsis, // Добавьте многоточие, если текст длинный
+            ),
+          ),
         ],
       ),
-    );
-  }
+    ),
+    body: Column(
+      children: [
+        Expanded(child: _buildMessageList()),
+        _buildMessageInput(),
+      ],
+    ),
+  );
 }
+
+
+  }
